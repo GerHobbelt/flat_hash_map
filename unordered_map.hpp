@@ -39,7 +39,10 @@ struct sherwood_v10_entry
 
     static EntryPointer * empty_pointer()
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-arithmetic"
         static EntryPointer result[3] = { EntryPointer(nullptr) + ptrdiff_t(1), nullptr, nullptr };
+#pragma clang diagnostic pop
         return result + 1;
     }
 };
@@ -130,17 +133,17 @@ public:
     sherwood_v10_table(const sherwood_v10_table & other, const ArgumentAlloc & alloc)
         : EntryAlloc(alloc), Hasher(other), Equal(other), BucketAllocator(alloc), _max_load_factor(other._max_load_factor)
     {
-        try
+        //try
         {
             rehash_for_other_container(other);
             insert(other.begin(), other.end());
         }
-        catch(...)
+        /*catch(...)
         {
             clear();
             deallocate_data();
             throw;
-        }
+        }*/
     }
     sherwood_v10_table(sherwood_v10_table && other) noexcept
         : EntryAlloc(std::move(other)), Hasher(std::move(other)), Equal(std::move(other)), BucketAllocator(std::move(other)), _max_load_factor(other._max_load_factor)
@@ -422,7 +425,10 @@ public:
             return;
         EntryPointer * new_buckets(&*BucketAllocatorTraits::allocate(*this, num_buckets + 1));
         EntryPointer * end_it = new_buckets + static_cast<ptrdiff_t>(num_buckets + 1);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-arithmetic"
         *new_buckets = EntryPointer(nullptr) + ptrdiff_t(1);
+#pragma clang diagnostic pop
         ++new_buckets;
         std::fill(new_buckets, end_it, nullptr);
         std::swap(entries, new_buckets);
@@ -613,15 +619,15 @@ private:
         else
         {
             EntryPointer new_entry = AllocatorTraits::allocate(*this, 1);
-            try
+            //try
             {
                 AllocatorTraits::construct(*this, std::addressof(new_entry->value), std::forward<Args>(args)...);
             }
-            catch(...)
+            /*catch(...)
             {
                 AllocatorTraits::deallocate(*this, new_entry, 1);
                 throw;
-            }
+            }*/
             ++num_elements;
             new_entry->next = *bucket;
             *bucket = new_entry;
@@ -760,15 +766,17 @@ public:
     V & at(const K & key)
     {
         auto found = this->find(key);
-        if (found == this->end())
-            throw std::out_of_range("Argument passed to at() was not in the map.");
+        if (found == this->end()) {
+            LOG(FATAL) << "Argument passed to at() was not in the map.";
+        }
         return found->second;
     }
     const V & at(const K & key) const
     {
         auto found = this->find(key);
-        if (found == this->end())
-            throw std::out_of_range("Argument passed to at() was not in the map.");
+        if (found == this->end()) {
+            LOG(FATAL) << "Argument passed to at() was not in the map.";
+        }
         return found->second;
     }
 
